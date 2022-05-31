@@ -3,6 +3,17 @@ import { GLTFLoader } from 'https://cdn.skypack.dev/three@0.136.0/examples/jsm/l
 import { OrbitControls } from 'https://cdn.skypack.dev/three@0.136.0/examples/jsm/controls/OrbitControls.js';
 
 const container = document.getElementById( 'container' );
+const joystick = document.getElementById( 'joystick' );
+let map;
+let character;
+
+let fwdValue = 0;
+let bkdValue = 0;
+let rgtValue = 0;
+let lftValue = 0;
+let tempVector = new THREE.Vector3();
+let upVector = new THREE.Vector3(0, 1, 0);
+let joyManager;
 
 // ===== renderer =====
 const renderer = new THREE.WebGLRenderer( { antialias: true } );
@@ -36,9 +47,9 @@ controls.enableDamping = true;
 const loader = new GLTFLoader();
 loader.load( 'assets/dry-sand.glb', function ( gltf ) {
 
-    const model = gltf.scene;
-    model.scale.set( 0.1, 0.1, 0.1 );
-    scene.add( model );
+    map = gltf.scene;
+    map.scale.set( 0.1, 0.1, 0.1 );
+    scene.add( map );
     animate();
 
 }, undefined, function ( e ) {
@@ -50,10 +61,10 @@ loader.load( 'assets/dry-sand.glb', function ( gltf ) {
 // ===== load character =====
 loader.load( 'assets/vanguard.glb', function ( gltf ) {
 
-    const model = gltf.scene;
-    model.scale.set( 0.01, 0.01, 0.01 );
-    model.position.set( 0, 1.25, 0);
-    scene.add( model );
+    character = gltf.scene;
+    character.scale.set( 0.01, 0.01, 0.01 );
+    character.position.set( 0, 1.25, 0);
+    scene.add( character );
     animate();
 
 }, undefined, function ( e ) {
@@ -62,8 +73,14 @@ loader.load( 'assets/vanguard.glb', function ( gltf ) {
 
 } );
 
+// ===== joysticks =====
+addJoyStick();
+
+// ===== helper =====
 const axesHelper = new THREE.AxesHelper( 5 );
 scene.add( axesHelper );
+const gridHelper = new THREE.GridHelper( size, divisions );
+scene.add( gridHelper );
 
 window.onresize = function () {
 
@@ -77,6 +94,8 @@ window.onresize = function () {
 
 function animate() {
 
+    updatePlayer();
+
     requestAnimationFrame( animate );
 
     controls.update();
@@ -84,5 +103,84 @@ function animate() {
     renderer.render( scene, camera );
 
 }
+
+function addJoyStick() {
+    const options = {
+        zone: joystick,
+        size: 120,
+        multitouch: true,
+        maxNumberOfNipples: 2,
+        mode: 'static',
+        restJoystick: true,
+        shape: 'circle',
+        // position: { top: 20, left: 20 },
+        position: { top: '60px', left: '60px' },
+        dynamicPage: true,
+      }
+   
+   
+    joyManager = nipplejs.create(options);
+  
+    joyManager['0'].on('move', function (evt, data) {
+        const forward = data.vector.y
+        const turn = data.vector.x
+
+        if (forward > 0) {
+          fwdValue = Math.abs(forward)
+          bkdValue = 0
+        } else if (forward < 0) {
+          fwdValue = 0
+          bkdValue = Math.abs(forward)
+        }
+
+        if (turn > 0) {
+          lftValue = 0
+          rgtValue = Math.abs(turn)
+        } else if (turn < 0) {
+          lftValue = Math.abs(turn)
+          rgtValue = 0
+        }
+      })
+
+    joyManager['0'].on('end', function (evt) {
+        bkdValue = 0
+        fwdValue = 0
+        lftValue = 0
+        rgtValue = 0
+    })
+}
+
+function updatePlayer() {
+    // move the player
+    const angle = controls.getAzimuthalAngle();
+  
+    if (fwdValue > 0) {
+      tempVector.set(0, 0, -fwdValue).applyAxisAngle(upVector, angle);
+      character.position.addScaledVector(tempVector, 1);
+    }
+  
+    if (bkdValue > 0) {
+      tempVector.set(0, 0, bkdValue).applyAxisAngle(upVector, angle);
+      character.position.addScaledVector(tempVector, 1);
+    }
+  
+    if (lftValue > 0) {
+      tempVector.set(-lftValue, 0, 0).applyAxisAngle(upVector, angle);
+      character.position.addScaledVector(tempVector, 1);
+    }
+  
+    if (rgtValue > 0) {
+      tempVector.set(rgtValue, 0, 0).applyAxisAngle(upVector, angle);
+      character.position.addScaledVector(tempVector, 1);
+    }
+  
+    character.updateMatrixWorld();
+  
+    //controls.target.set( mesh.position.x, mesh.position.y, mesh.position.z );
+    // reposition camera
+    camera.position.sub(controls.target);
+    controls.target.copy(character.position);
+    camera.position.add(character.position);
+  }
 
 
