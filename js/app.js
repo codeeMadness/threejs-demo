@@ -4,8 +4,8 @@ import { OrbitControls } from 'https://cdn.skypack.dev/three@0.136.0/examples/js
 
 const container = document.getElementById( 'container' );
 const joystick = document.getElementById( 'joystick' );
-let map;
-let character;
+let map, mapBox;
+let character, characterBox;
 
 let fwdValue = 0;
 let bkdValue = 0;
@@ -49,6 +49,8 @@ loader.load( 'assets/dry-sand.glb', function ( gltf ) {
 
     map = gltf.scene;
     map.scale.set( 0.1, 0.1, 0.1 );
+    map.position.set(0,0,0);
+    
     scene.add( map );
     animate();
 
@@ -59,11 +61,12 @@ loader.load( 'assets/dry-sand.glb', function ( gltf ) {
 } );
 
 // ===== load character =====
-loader.load( 'assets/vanguard.glb', function ( gltf ) {
+loader.load( 'assets/Soldier.glb', function ( gltf ) {
 
     character = gltf.scene;
-    character.scale.set( 0.01, 0.01, 0.01 );
-    character.position.set( 0, 1.25, 0);
+    character.traverse(function(object) {
+      if(object.isMesh) object.cashShadow = true;
+    })
     scene.add( character );
     animate();
 
@@ -79,8 +82,6 @@ addJoyStick();
 // ===== helper =====
 const axesHelper = new THREE.AxesHelper( 5 );
 scene.add( axesHelper );
-const gridHelper = new THREE.GridHelper( size, divisions );
-scene.add( gridHelper );
 
 window.onresize = function () {
 
