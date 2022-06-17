@@ -1,6 +1,7 @@
 import * as THREE from 'https://cdn.skypack.dev/pin/three@v0.137.0-X5O2PK3x44y1WRry67Kr/mode=imports/optimized/three.js';
 import { GLTFLoader } from 'https://cdn.skypack.dev/three@0.136.0/examples/jsm/loaders/GLTFLoader.js';
 import { OrbitControls } from 'https://cdn.skypack.dev/three@0.136.0/examples/jsm/controls/OrbitControls.js';
+import { CSS2DRenderer, CSS2DObject } from 'https://cdn.skypack.dev/three@0.136.0/examples/jsm/renderers/CSS2DRenderer.js';
 
 const container = document.getElementById( 'container' );
 const joystick = document.getElementById( 'joystick' );
@@ -22,6 +23,13 @@ renderer.setSize( window.innerWidth, window.innerHeight );
 renderer.outputEncoding = THREE.sRGBEncoding;
 container.appendChild( renderer.domElement );
 
+// ===== 2D renderer =====
+const labelRenderer = new CSS2DRenderer();
+labelRenderer.setSize( window.innerWidth, window.innerHeight );
+labelRenderer.domElement.style.position = 'absolute';
+labelRenderer.domElement.style.top = '0px';
+container.appendChild( labelRenderer.domElement );
+
 // ===== scene =====
 const scene = new THREE.Scene();
 scene.background = new THREE.Color( 0xbfe3dd );
@@ -37,7 +45,7 @@ light.position.set(0.5, 1, 0.75);
 scene.add(light);
 
 // ===== controls =====
-const controls = new OrbitControls( camera, renderer.domElement );
+const controls = new OrbitControls( camera, labelRenderer.domElement );
 controls.target.set( 0, 0.5, 0 );
 controls.update();
 controls.enablePan = false;
@@ -62,11 +70,24 @@ loader.load( 'assets/dry-sand.glb', function ( gltf ) {
 
 // ===== load character =====
 loader.load( 'assets/Soldier.glb', function ( gltf ) {
-
     character = gltf.scene;
     character.traverse(function(object) {
       if(object.isMesh) object.cashShadow = true;
     })
+
+    // ==== add tooltip ====
+    const tooltip = document.createElement( 'div' );
+    tooltip.className = 'label';
+    tooltip.textContent = 'Vanguard';
+    tooltip.style.marginTop = '-1em';
+    tooltip.style.opacity = "0.2";
+    tooltip.style.background = "gray";
+    tooltip.style.color = "white";
+    tooltip.style.fontWeight = "bold";
+    const username = new CSS2DObject( tooltip );
+    username.position.set( character.position.x,  character.position.y + 2, character.position.z);
+    character.add( username );
+    
     scene.add( character );
     animate();
 
@@ -75,6 +96,8 @@ loader.load( 'assets/Soldier.glb', function ( gltf ) {
     console.error( e );
 
 } );
+
+
 
 // ===== joysticks =====
 addJoyStick();
@@ -89,6 +112,7 @@ window.onresize = function () {
     camera.updateProjectionMatrix();
 
     renderer.setSize( window.innerWidth, window.innerHeight );
+    labelRenderer.setSize( window.innerWidth, window.innerHeight );
 
 };
 
@@ -102,6 +126,7 @@ function animate() {
     controls.update();
 
     renderer.render( scene, camera );
+    labelRenderer.render( scene, camera );
 
 }
 
@@ -127,18 +152,18 @@ function addJoyStick() {
         const turn = data.vector.x
 
         if (forward > 0) {
-          fwdValue = Math.abs(forward)
+          fwdValue = 0.03
           bkdValue = 0
         } else if (forward < 0) {
           fwdValue = 0
-          bkdValue = Math.abs(forward)
+          bkdValue = 0.03
         }
 
         if (turn > 0) {
           lftValue = 0
-          rgtValue = Math.abs(turn)
+          rgtValue = 0.03
         } else if (turn < 0) {
-          lftValue = Math.abs(turn)
+          lftValue = 0.03
           rgtValue = 0
         }
       })
