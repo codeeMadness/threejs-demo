@@ -6,6 +6,8 @@ const container = document.getElementById( 'container' );
 const joystick = document.getElementById( 'joystick' );
 let map;
 let character;
+let boxMap;
+let boxCharacter;
 
 let fwdValue = 0;
 let bkdValue = 0;
@@ -46,10 +48,29 @@ controls.enableDamping = true;
 // ===== load map =====
 const loader = new GLTFLoader();
 loader.load( 'assets/dry-sand.glb', function ( gltf ) {
+    gltf.scene.traverse( function ( child )
+    {
+        if ( child.isMesh )
+        {
+          var helper = new THREE.BoxHelper(child);
+          helper.geometry.computeBoundingBox();
+          // console.log(helper.geometry.boundingBox);
+
+          child.geometry.computeBoundingBox();
+          // console.log(child.geometry.boundingBox);
+
+          boxMap = new THREE.Box3();
+          boxMap.copy( child.geometry.boundingBox );
+          child.updateMatrixWorld( true );
+          boxMap.applyMatrix4( child.matrixWorld );
+          console.log( boxMap );
+        }
+    } );
 
     map = gltf.scene;
     map.scale.set( 0.1, 0.1, 0.1 );
     scene.add( map );
+    
     animate();
 
 }, undefined, function ( e ) {
@@ -60,8 +81,8 @@ loader.load( 'assets/dry-sand.glb', function ( gltf ) {
 
 // ===== load character =====
 loader.load( 'assets/vanguard.glb', function ( gltf ) {
-
     character = gltf.scene;
+
     character.scale.set( 0.01, 0.01, 0.01 );
     character.position.set( 0, 1.25, 0);
     scene.add( character );
@@ -79,8 +100,6 @@ addJoyStick();
 // ===== helper =====
 const axesHelper = new THREE.AxesHelper( 5 );
 scene.add( axesHelper );
-const gridHelper = new THREE.GridHelper( size, divisions );
-scene.add( gridHelper );
 
 window.onresize = function () {
 
@@ -126,18 +145,18 @@ function addJoyStick() {
         const turn = data.vector.x
 
         if (forward > 0) {
-          fwdValue = Math.abs(forward)
+          fwdValue = 0.03
           bkdValue = 0
         } else if (forward < 0) {
           fwdValue = 0
-          bkdValue = Math.abs(forward)
+          bkdValue = 0.03
         }
 
         if (turn > 0) {
           lftValue = 0
-          rgtValue = Math.abs(turn)
+          rgtValue = 0.03
         } else if (turn < 0) {
-          lftValue = Math.abs(turn)
+          lftValue = 0.03
           rgtValue = 0
         }
       })
@@ -173,7 +192,8 @@ function updatePlayer() {
       tempVector.set(rgtValue, 0, 0).applyAxisAngle(upVector, angle);
       character.position.addScaledVector(tempVector, 1);
     }
-  
+    
+    updateMesh();
     character.updateMatrixWorld();
   
     //controls.target.set( mesh.position.x, mesh.position.y, mesh.position.z );
@@ -181,6 +201,27 @@ function updatePlayer() {
     camera.position.sub(controls.target);
     controls.target.copy(character.position);
     camera.position.add(character.position);
+  }
+
+  function updateMesh() {
+    character.traverse( function ( child )
+    {
+        if ( child.isMesh )
+        {
+            var helper = new THREE.BoxHelper(child);
+            helper.geometry.computeBoundingBox();
+            // console.log(helper.geometry.boundingBox);
+
+            child.geometry.computeBoundingBox();
+            // console.log(child.geometry.boundingBox);
+
+            boxCharacter = new THREE.Box3();
+            boxCharacter.copy( child.geometry.boundingBox );
+            child.updateMatrixWorld( true );
+            boxCharacter.applyMatrix4( child.matrixWorld );
+            console.log( boxCharacter );
+        }
+    } );
   }
 
 
